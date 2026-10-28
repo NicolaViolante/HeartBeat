@@ -1,5 +1,76 @@
 # Serverless Heart Rate Streaming And Batch Processing Architecture
+
 This repository contains the final project for the course of Distributed Systems and Cloud Computing of the University of Rome Tor Vergata (faculty Computer Engineering).
+
+---
+
+## 📌 Executive Summary
+
+HeartBeat is a serverless architecture for collecting and processing heart-rate measurements through two ingestion paths: continuous MQTT streaming and S3-based batch uploads. The project combines managed AWS services to ingest simulated BPM data, process it with Lambda functions, expose application functionality through API Gateway, and support user authentication through Amazon Cognito.
+
+The repository includes the front-end assets, AWS deployment templates, an API Gateway Swagger definition, and two Python scripts used to simulate device data:
+
+1. **Streaming ingestion:** `streamingMQTT.py` generates simulated heart-rate values and publishes them to AWS IoT Core over MQTT using mutual TLS certificates.
+2. **Batch ingestion:** `batchMQTT.py` generates a batch of timestamped heart-rate records and uploads the resulting JSON payload to an S3 bucket.
+3. **Serverless processing:** AWS Lambda functions process incoming data and support application and authorization workflows.
+4. **API and identity management:** API Gateway exposes the REST API, while Cognito provides user-pool authentication and group-based authorization checks.
+5. **Data storage and presentation:** S3 stores deployment assets and batch objects, DynamoDB contains patient/device records, and the front-end files provide the web interface.
+
+This repository is an academic project and should be treated as a reference implementation rather than a production-ready medical monitoring system.
+
+---
+
+## 🎯 Technical Scope & Key Findings
+
+### 1. Streaming Data Path
+
+- `streamingMQTT.py` connects to AWS IoT Core using a device certificate, a private key, and the Amazon Root CA certificate.
+- The simulator uses the client ID `IoTSimulator` and publishes to the `IoTSimulator/bpm` MQTT topic.
+- Each payload includes a device identifier, a millisecond timestamp, and five generated BPM values.
+- Messages are published with MQTT QoS 1, and the script continues publishing at five-second intervals until interrupted.
+
+### 2. Batch Data Path
+
+- `batchMQTT.py` generates ten timestamped records, each containing five BPM measurements.
+- The script serializes the data into JSON and uploads it to the configured S3 bucket.
+- The AWS deployment instructions configure an S3 `PUT` trigger for the `splitBatchData` Lambda function so uploaded batch data can initiate processing.
+- The processing flow expects a corresponding device entry in the `IoTPatient` DynamoDB table for `deviceId=IoTSimulator`.
+
+### 3. API and Authentication
+
+- `HeartBeatAPI-dev-swagger-apigateway.json` describes the API Gateway REST API.
+- Amazon Cognito supplies the user pool and app-client configuration used for sign-in.
+- The deployment templates reference authorization functions named `checkPatientGroupAuth`, `checkDoctorGroupAuth`, and `checkAdminGroupAuth`.
+- The API, Cognito resources, Lambda configuration, and authorizer identifiers must refer to the resources created in the deployer's own AWS account.
+
+### 4. AWS Service Responsibilities
+
+| Component | Responsibility in the project |
+| --- | --- |
+| **AWS IoT Core** | Receives device-simulator messages over MQTT using certificate-based authentication. |
+| **AWS Lambda** | Runs serverless application, authorization, and data-processing functions. |
+| **Amazon S3** | Stores deployment assets, the Swagger definition, front-end files, and uploaded batch payloads. |
+| **Amazon API Gateway** | Exposes the REST API used by the front end. |
+| **Amazon Cognito** | Manages user-pool authentication and supports group-based authorization. |
+| **Amazon DynamoDB** | Stores patient/device records, including the `IoTPatient` table referenced by the scripts and deployment notes. |
+
+---
+
+## 🗂️ Repository Contents
+
+| Path | Description |
+| --- | --- |
+| `frontend/` | Front-end assets for the web application. |
+| `lambdazip/` | Lambda deployment package assets. |
+| `template aws/` | AWS CloudFormation templates used to create the application's resources. |
+| `HeartBeatAPI-dev-swagger-apigateway.json` | Swagger/API definition for API Gateway. |
+| `deploymentAWS.txt` | Additional AWS deployment notes. |
+| `streamingMQTT.py` | Simulates live heart-rate data and publishes it to AWS IoT Core. |
+| `batchMQTT.py` | Generates batch heart-rate data and uploads it to S3. |
+| `ReportHeartBeat.pdf` | Project report. |
+| `SlidesHeartBeat.pptx` | Project presentation. |
+
+---
 
 To execute the project follow the next steps:
 
